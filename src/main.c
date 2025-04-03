@@ -1,13 +1,24 @@
 #include "raylib.h"
+#include "raymath.h"
 #include "stdlib.h"
 #include "stdio.h"
 #include "ball.h"
 #include "string.h"
 #include "paddle.h"
 #include <time.h>
+#include <math.h>
+
+#define TRAIL_LENGTH 10
+#define PARTICLE_COUNT 50
+
+typedef struct Particle {
+    Vector2 position;
+    Vector2 velocity;
+    Color color;
+    float life;
+} Particle;
 
 int main(void) {
-    
     srand(time(NULL));
     int playerscore = 0;
     int enemyscore = 0;
@@ -66,6 +77,27 @@ int main(void) {
     int selectedBackgroundColorIndex = 0;
     Color colorOptions[] = {WHITE, RED, BLUE, YELLOW, GREEN, PURPLE};
     const char *colorNames[] = {"White", "Red", "Blue", "Yellow", "Green", "Purple"};
+
+    Vector2 ballTrail[TRAIL_LENGTH];
+    for (int i = 0; i < TRAIL_LENGTH; i++) {
+        ballTrail[i] = (Vector2){-100, -100};
+    }
+
+    Particle particles[PARTICLE_COUNT];
+    for(int i = 0; i < PARTICLE_COUNT; i++){
+        particles[i].life = 0;
+    }
+
+    void createParticles(Vector2 position, Color color) {
+        for (int i = 0; i < PARTICLE_COUNT; i++) {
+            if (particles[i].life <= 0) {
+                particles[i].position = position;
+                particles[i].velocity = (Vector2){(float)(rand() % 20 - 10) / 5.0f, (float)(rand() % 20 - 10) / 5.0f};
+                particles[i].color = color;
+                particles[i].life = 1.0f;
+            }
+        }
+    }
 
     while (!WindowShouldClose()) {
         switch (gameState) {
@@ -150,6 +182,12 @@ int main(void) {
                 EndDrawing();
                 break;
             case GAME:
+                // Trail update
+                for (int i = TRAIL_LENGTH - 1; i > 0; i--) {
+                    ballTrail[i] = ballTrail[i - 1];
+                }
+                ballTrail[0] = (Vector2){ball->x, ball->y};
+
                 if (IsKeyDown(KEY_W) && player->y > 0) {
                     player->y -= player->speed;
                 }
@@ -157,6 +195,7 @@ int main(void) {
                     player->y += player->speed;
                 }
                 if (ball->x >= screenWidth || ball->x <= 0) {
+                    createParticles((Vector2){ball->x, ball->y}, ballColor);
                     ball->speedx *= -1;
                     if (ball->x >= screenWidth) {
                         playerscore++;
@@ -180,6 +219,7 @@ int main(void) {
                     }
                 }
                 if (ball->y >= screenHeight || ball->y <= 0) {
+                    createParticles((Vector2){ball->x, ball->y}, ballColor);
                     ball->speedy *= -1;
                 }
                 ball->x += ball->speedx;
@@ -195,11 +235,27 @@ int main(void) {
                 Vector2 ballPos = {ball->x, ball->y};
 
                 if (CheckCollisionCircleRec(ballPos, 15, playerRect) || CheckCollisionCircleRec(ballPos, 15, enemyRect)) {
+                    createParticles((Vector2){ball->x, ball->y}, ballColor);
                     ball->speedx *= -1;
                 }
 
                 BeginDrawing();
                 ClearBackground(backgroundColor);
+
+                // Draw trail
+                for (int i = 0; i < TRAIL_LENGTH; i++) {
+                    DrawCircleV(ballTrail[i], 15 - (i * (15.0f / TRAIL_LENGTH)), Fade(ballColor, 1.0f - (i * (1.0f / TRAIL_LENGTH))));
+                }
+
+                // Draw particles
+                for (int i = 0; i < PARTICLE_COUNT; i++) {
+                    if (particles[i].life > 0) {
+                        DrawCircleV(particles[i].position, 2, Fade(particles[i].color, particles[i].life));
+                        particles[i].position = Vector2Add(particles[i].position, particles[i].velocity);
+                        particles[i].life -= 0.02f;
+                    }
+                }
+
                 DrawCircle(ball->x, ball->y, 15, ballColor);
                 DrawRectangle(player->x, player->y, player->width, bigPaddleActive && bigPaddleUser == player ? player->height * 2 : player->height, paddleColor);
                 DrawRectangle(enemy->x, enemy->y, enemy->width, bigPaddleActive && bigPaddleUser == enemy ? enemy->height * 2 : enemy->height, paddleColor);

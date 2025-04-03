@@ -4,4 +4,5 @@ main.c:
 clean:
 	rm -rf bin/*
 run:
+	
 	bin/pongremastered

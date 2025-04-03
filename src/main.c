@@ -7,6 +7,7 @@
 #include <time.h>
 
 int main(void) {
+    
     srand(time(NULL));
     int playerscore = 0;
     int enemyscore = 0;
@@ -32,6 +33,7 @@ int main(void) {
     }
     const int screenWidth = 600;
     const int screenHeight = 600;
+    SetConfigFlags(FLAG_WINDOW_HIDDEN);
     InitWindow(screenWidth, screenHeight, "Pong: Remastered");
     SetTargetFPS(60);
 
